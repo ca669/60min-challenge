@@ -129,9 +129,7 @@ function App() {
         try {
             await axios.post('/api/entries', {
                 ...formData,
-
                 username: user.username,
-
                 token: user.token
             });
             await fetchEntries();

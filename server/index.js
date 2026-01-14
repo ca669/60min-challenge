@@ -78,7 +78,7 @@ function generateToken() {
 }
 
 function getTodayISO() {
-    return new Date().toISOString().split('T')[0];
+    return new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Berlin' });
 }
 
 // --- API Routes ---
@@ -181,11 +181,11 @@ app.post('/api/entries', async (req, res) => {
 // Sync Database and Start Server
 sequelize.sync().then(async () => {
     console.log('Datenbank synchronisiert.');
-    
+
     // Seed Admin User
     const adminUser = await User.findOne({ where: { username: 'Pascal' } });
     const initialToken = process.env.ADMIN_TOKEN || 'ABCDEF';
-    
+
     if (!adminUser) {
         await User.create({
             username: 'Pascal',
