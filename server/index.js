@@ -84,7 +84,7 @@ function getTodayISO() {
 // --- API Routes ---
 
 // Login
-app.post('/login', async (req, res) => {
+app.post('/api/login', async (req, res) => {
     const { username, token } = req.body;
     try {
         const user = await User.findOne({ where: { username } });
@@ -99,7 +99,7 @@ app.post('/login', async (req, res) => {
 });
 
 // Create User (Admin only)
-app.post('/users', async (req, res) => {
+app.post('/api/users', async (req, res) => {
     const { adminUsername, adminToken, newUsername } = req.body;
 
     try {
@@ -129,7 +129,7 @@ app.post('/users', async (req, res) => {
 });
 
 // Get all entries
-app.get('/entries', async (req, res) => {
+app.get('/api/entries', async (req, res) => {
     try {
         const entries = await Entry.findAll({
             order: [['date', 'DESC']]
@@ -141,7 +141,7 @@ app.get('/entries', async (req, res) => {
 });
 
 // Create or Update an entry
-app.post('/entries', async (req, res) => {
+app.post('/api/entries', async (req, res) => {
     const { date, username, token, journal, meditation, movement } = req.body;
 
     if (!date || !username || !token) {

@@ -62,7 +62,7 @@ function App() {
 
     const fetchEntries = async () => {
         try {
-            const response = await axios.get('http://localhost:3001/entries');
+            const response = await axios.get('/api/entries');
             setEntries(response.data);
         } catch (error) {
             console.error('Fehler beim Laden der Einträge:', error);
@@ -79,13 +79,13 @@ function App() {
     // --- Auth Handlers ---
 
     const handleLogin = async (e) => {
-        e.preventDefault();
-        setLoginError('');
-        try {
-            const res = await axios.post('http://localhost:3001/login', {
-                username: loginUser,
-                token: loginToken
-            });
+    e.preventDefault()
+    setLoginError('')
+    try {
+      const res = await axios.post('/api/login', {
+        username: loginUser,
+        token: loginToken
+      })
             if (res.data.success) {
                 setUser({
                     username: res.data.username,
@@ -122,12 +122,17 @@ function App() {
             return;
         }
 
-        try {
-            await axios.post('http://localhost:3001/entries', {
+            try {
+
+              await axios.post('/api/entries', {
+
                 ...formData,
+
                 username: user.username,
+
                 token: user.token
-            });
+
+              });
             await fetchEntries();
             addToast('Erfolg', 'Eintrag erfolgreich gespeichert!', 'success');
         } catch (error) {
@@ -142,12 +147,17 @@ function App() {
         e.preventDefault();
         if (!newUser.trim()) return;
 
-        try {
-            const res = await axios.post('http://localhost:3001/users', {
+            try {
+
+              const res = await axios.post('/api/users', {
+
                 adminUsername: user.username,
+
                 adminToken: user.token,
+
                 newUsername: newUser
-            });
+
+              });
 
             // Show persistent toast with credentials
             addToast(
