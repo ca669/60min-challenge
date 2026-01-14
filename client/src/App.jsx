@@ -26,8 +26,12 @@ function App() {
 
     // Data State
     const [entries, setEntries] = useState([]);
+    
+    // Hilfsfunktion für Berliner Datum (YYYY-MM-DD)
+    const getTodayISO = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Berlin' });
+
     const [formData, setFormData] = useState({
-        date: new Date().toISOString().split('T')[0],
+        date: getTodayISO(),
         journal: false,
         meditation: false,
         movement: false
@@ -39,7 +43,7 @@ function App() {
     // UI State
     const [toasts, setToasts] = useState([]); // Array of { id, title, message, type }
 
-    const getTodayISO = () => new Date().toISOString().split('T')[0];
+    // (getTodayISO nach oben verschoben)
 
     const addToast = (title, message, type = 'info') => {
         let id;
@@ -79,13 +83,13 @@ function App() {
     // --- Auth Handlers ---
 
     const handleLogin = async (e) => {
-    e.preventDefault()
-    setLoginError('')
-    try {
-      const res = await axios.post('/api/login', {
-        username: loginUser,
-        token: loginToken
-      })
+        e.preventDefault();
+        setLoginError('');
+        try {
+            const res = await axios.post('/api/login', {
+                username: loginUser,
+                token: loginToken
+            });
             if (res.data.success) {
                 setUser({
                     username: res.data.username,
@@ -122,17 +126,14 @@ function App() {
             return;
         }
 
-            try {
-
-              await axios.post('/api/entries', {
-
+        try {
+            await axios.post('/api/entries', {
                 ...formData,
 
                 username: user.username,
 
                 token: user.token
-
-              });
+            });
             await fetchEntries();
             addToast('Erfolg', 'Eintrag erfolgreich gespeichert!', 'success');
         } catch (error) {
@@ -147,17 +148,12 @@ function App() {
         e.preventDefault();
         if (!newUser.trim()) return;
 
-            try {
-
-              const res = await axios.post('/api/users', {
-
+        try {
+            const res = await axios.post('/api/users', {
                 adminUsername: user.username,
-
                 adminToken: user.token,
-
                 newUsername: newUser
-
-              });
+            });
 
             // Show persistent toast with credentials
             addToast(
@@ -186,7 +182,6 @@ function App() {
     };
 
     // --- Helpers ---
-
     const getProgress = (entry) => {
         let count = 0;
         if (entry.journal) count++;
