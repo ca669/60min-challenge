@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+client/dist/
+
+# Databases
+server/data/
+*.sqlite
+*.sqlite-journal
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker
+.dockerignore
+
+# IDEs
+.vscode/
+.idea/
