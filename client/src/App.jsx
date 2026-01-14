@@ -303,7 +303,7 @@ function App() {
                                 onChange={handleEntryChange}
                                 disabled={!isToday(formData.date)}
                             />
-                            <span>📝 10min Tagebuch</span>
+                            <span>📝 10min Schritte / Tagebuch</span>
                         </label>
 
                         <label
