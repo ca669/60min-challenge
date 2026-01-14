@@ -26,7 +26,7 @@ function App() {
 
     // Data State
     const [entries, setEntries] = useState([]);
-    
+
     // Hilfsfunktion für Berliner Datum (YYYY-MM-DD)
     const getTodayISO = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Berlin' });
 
