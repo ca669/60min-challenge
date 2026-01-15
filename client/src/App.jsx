@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import { notifications } from '@mantine/notifications';
 import {
     loginUser,
@@ -33,10 +33,7 @@ function App() {
 
     const fetchAllData = async () => {
         try {
-            const [entriesData, usersData] = await Promise.all([
-                getEntries(),
-                getAllUsers()
-            ]);
+            const [entriesData, usersData] = await Promise.all([getEntries(), getAllUsers()]);
             setEntries(entriesData);
             setAllUsers(usersData);
         } catch (error) {
@@ -59,6 +56,20 @@ function App() {
         // Fetch data
         fetchAllData();
     }, []);
+
+    useEffect(() => {
+        const userEntry = entries.find(
+            (e) => e.username === user?.username && e.date === getTodayISO()
+        );
+        if (userEntry) {
+            setFormData({
+                date: userEntry.date,
+                journal: userEntry.journal,
+                meditation: userEntry.meditation,
+                movement: userEntry.movement
+            });
+        }
+    }, [entries]);
 
     // --- Auth Handlers ---
 

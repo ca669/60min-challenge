@@ -1,5 +1,4 @@
-import React from 'react';
-import { Card, Checkbox, Button, Group, Text, Title, Stack } from '@mantine/core';
+import { Card, Checkbox, Button, Title, Stack } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import dayjs from 'dayjs';
 

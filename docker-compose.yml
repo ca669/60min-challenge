@@ -1,10 +1,10 @@
-version: '3.8'
+version: "3.8"
 
 services:
   server:
     build: ./server
     ports:
-      - "3001:3001"
+      - "3008:3001"
     environment:
       - ADMIN_TOKEN=XXXXXX
     volumes:
@@ -14,7 +14,7 @@ services:
   client:
     build: ./client
     ports:
-      - "8080:80"
+      - "8090:80"
     depends_on:
       - server
     restart: always

@@ -44,27 +44,27 @@ const EntryList = ({ entries, allUsers, currentUsername }) => {
                 </Table.Td>
                 <Table.Td>
                     {journal ? (
-                        <IconCheck size={20} color="green" />
+                        <IconCheck size={20} color="green" strokeWidth={4} />
                     ) : (
-                        <IconX size={20} color="gray" />
+                        <IconX size={20} color="red" strokeWidth={4} />
                     )}
                 </Table.Td>
                 <Table.Td>
                     {meditation ? (
-                        <IconCheck size={20} color="green" />
+                        <IconCheck size={20} color="green" strokeWidth={4} />
                     ) : (
-                        <IconX size={20} color="gray" />
+                        <IconX size={20} color="red" strokeWidth={4} />
                     )}
                 </Table.Td>
                 <Table.Td>
                     {movement ? (
-                        <IconCheck size={20} color="green" />
+                        <IconCheck size={20} color="green" strokeWidth={4} />
                     ) : (
-                        <IconX size={20} color="gray" />
+                        <IconX size={20} color="red" strokeWidth={4} />
                     )}
                 </Table.Td>
                 <Table.Td>
-                    <Progress value={progress} color="blue" size="sm" />
+                    <Progress value={progress} color="green" size="sm" />
                 </Table.Td>
             </Table.Tr>
         );
