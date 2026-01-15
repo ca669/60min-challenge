@@ -1,34 +1,28 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
-import './App.css';
+import { notifications } from '@mantine/notifications';
+import {
+    loginUser,
+    logoutUser,
+    getStoredSession,
+    getEntries,
+    saveEntry,
+    createNewUser,
+    getAllUsers
+} from './services/api';
+import LoginPage from './pages/LoginPage';
+import DashboardPage from './pages/DashboardPage';
 
-// Toast Component
-const Toast = ({ message, title, type, onClose }) => {
-    return (
-        <div className={`toast ${type || 'info'}`}>
-            <div className="toast-content">
-                {title && <span className="toast-title">{title}</span>}
-                <span>{message}</span>
-            </div>
-            <button className="toast-close" onClick={onClose}>
-                &times;
-            </button>
-        </div>
-    );
-};
+// Helper function moved outside component
+const getTodayISO = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Berlin' });
 
 function App() {
     // Auth State
     const [user, setUser] = useState(null);
-    const [loginUser, setLoginUser] = useState('');
-    const [loginToken, setLoginToken] = useState('');
     const [loginError, setLoginError] = useState('');
 
     // Data State
     const [entries, setEntries] = useState([]);
-
-    // Hilfsfunktion für Berliner Datum (YYYY-MM-DD)
-    const getTodayISO = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Berlin' });
+    const [allUsers, setAllUsers] = useState([]);
 
     const [formData, setFormData] = useState({
         date: getTodayISO(),
@@ -37,64 +31,47 @@ function App() {
         movement: false
     });
 
-    // Admin State
-    const [newUser, setNewUser] = useState('');
-
-    // UI State
-    const [toasts, setToasts] = useState([]); // Array of { id, title, message, type }
-
-    // (getTodayISO nach oben verschoben)
-
-    const addToast = (title, message, type = 'info') => {
-        let id;
-        setToasts((prev) => {
-            id = Date.now();
-            return [...prev, { id, title, message, type }];
-        });
-
-        // Auto remove normal info/success messages after 5s, but keep "new user" (important) longer or manual
-        if (type !== 'manual-close') {
-            setTimeout(() => {
-                removeToast(id);
-            }, 5000);
-        }
-    };
-
-    const removeToast = (id) => {
-        setToasts((prev) => prev.filter((t) => t.id !== id));
-    };
-
-    const fetchEntries = async () => {
+    const fetchAllData = async () => {
         try {
-            const response = await axios.get('/api/entries');
-            setEntries(response.data);
+            const [entriesData, usersData] = await Promise.all([
+                getEntries(),
+                getAllUsers()
+            ]);
+            setEntries(entriesData);
+            setAllUsers(usersData);
         } catch (error) {
-            console.error('Fehler beim Laden der Einträge:', error);
+            console.error('Fehler beim Laden der Daten:', error);
+            notifications.show({
+                title: 'Fehler',
+                message: 'Konnte Daten nicht laden',
+                color: 'red'
+            });
         }
     };
 
     useEffect(() => {
-        const loadEntries = async () => {
-            await fetchEntries();
-        };
-        loadEntries();
+        // Try to restore session on mount
+        const storedSession = getStoredSession();
+        if (storedSession) {
+            setUser(storedSession);
+        }
+
+        // Fetch data
+        fetchAllData();
     }, []);
 
     // --- Auth Handlers ---
 
-    const handleLogin = async (e) => {
-        e.preventDefault();
+    const handleLogin = async (username, token) => {
         setLoginError('');
         try {
-            const res = await axios.post('/api/login', {
-                username: loginUser,
-                token: loginToken
-            });
-            if (res.data.success) {
+            const data = await loginUser(username, token);
+            if (data.success) {
+                // loginUser service now returns the full user object including token
                 setUser({
-                    username: res.data.username,
-                    isAdmin: res.data.isAdmin,
-                    token: loginToken
+                    username: data.username,
+                    isAdmin: data.isAdmin,
+                    token: data.token
                 });
             }
         } catch {
@@ -103,89 +80,71 @@ function App() {
     };
 
     const handleLogout = () => {
+        logoutUser();
         setUser(null);
-        setLoginToken('');
-        setLoginUser('');
     };
 
     // --- Entry Handlers ---
-
-    const handleEntryChange = (e) => {
-        const { name, value, type, checked } = e.target;
-        setFormData((prev) => ({
-            ...prev,
-            [name]: type === 'checkbox' ? checked : value
-        }));
-    };
 
     const handleEntrySubmit = async (e) => {
         e.preventDefault();
 
         if (formData.date !== getTodayISO()) {
-            addToast('Fehler', 'Du kannst nur den heutigen Tag bearbeiten!', 'error');
+            notifications.show({
+                title: 'Fehler',
+                message: 'Du kannst nur den heutigen Tag bearbeiten!',
+                color: 'red'
+            });
             return;
         }
 
         try {
-            await axios.post('/api/entries', {
+            await saveEntry({
                 ...formData,
                 username: user.username,
                 token: user.token
             });
-            await fetchEntries();
-            addToast('Erfolg', 'Eintrag erfolgreich gespeichert!', 'success');
+            await fetchAllData();
+            notifications.show({
+                title: 'Erfolg',
+                message: 'Eintrag erfolgreich gespeichert!',
+                color: 'green'
+            });
         } catch (error) {
             console.error('Fehler:', error);
-            addToast('Fehler', error.response?.data?.error || 'Speichern fehlgeschlagen', 'error');
+            notifications.show({
+                title: 'Fehler',
+                message: error.response?.data?.error || 'Speichern fehlgeschlagen',
+                color: 'red'
+            });
         }
     };
 
     // --- Admin Handlers ---
 
-    const handleCreateUser = async (e) => {
-        e.preventDefault();
-        if (!newUser.trim()) return;
+    const handleCreateUser = async (newUsername) => {
+        if (!newUsername.trim()) return;
 
         try {
-            const res = await axios.post('/api/users', {
+            const data = await createNewUser({
                 adminUsername: user.username,
                 adminToken: user.token,
-                newUsername: newUser
+                newUsername: newUsername
             });
 
-            // Show persistent toast with credentials
-            addToast(
-                'Benutzer erstellt!',
-                `Name: ${res.data.username} | Code: ${res.data.token}`,
-                'success manual-close' // Use 'success' style but prevent auto-close if logic allows, actually I used type for style
-            );
-
-            console.log('Neuer Benutzer:', res.data);
-
-            setNewUser('');
+            notifications.show({
+                title: 'Benutzer erstellt!',
+                message: `Name: ${data.username} | Code: ${data.token}`,
+                color: 'green',
+                autoClose: false // Keep open so they can copy the code
+            });
         } catch (error) {
-            addToast(
-                'Fehler',
-                'Fehler beim Anlegen: ' + (error.response?.data?.error || error.message),
-                'error'
-            );
+            notifications.show({
+                title: 'Fehler',
+                message: 'Fehler beim Anlegen: ' + (error.response?.data?.error || error.message),
+                color: 'red'
+            });
         }
-    };
-
-    // Helper to determine toast class
-    const getToastClass = (type) => {
-        if (type === 'success' || type.includes('success')) return 'success';
-        if (type === 'error') return 'error';
-        return '';
-    };
-
-    // --- Helpers ---
-    const getProgress = (entry) => {
-        let count = 0;
-        if (entry.journal) count++;
-        if (entry.meditation) count++;
-        if (entry.movement) count++;
-        return Math.round((count / 3) * 100);
     };
 
     const isToday = (dateString) => dateString === getTodayISO();
@@ -193,199 +152,21 @@ function App() {
     // --- Render ---
 
     if (!user) {
-        return (
-            <div className="container">
-                <h1>60-Minuten Challenge</h1>
-                <div className="card">
-                    <h2>Anmelden</h2>
-                    <form onSubmit={handleLogin}>
-                        <div className="form-group">
-                            <label>Benutzername:</label>
-                            <input
-                                type="text"
-                                value={loginUser}
-                                onChange={(e) => setLoginUser(e.target.value)}
-                                required
-                            />
-                        </div>
-                        <div className="form-group">
-                            <label>Code (6 Buchstaben):</label>
-                            <input
-                                type="text"
-                                value={loginToken}
-                                onChange={(e) => setLoginToken(e.target.value.toUpperCase())}
-                                maxLength={6}
-                                required
-                            />
-                        </div>
-                        {loginError && <p className="error">{loginError}</p>}
-                        <button type="submit">Starten</button>
-                    </form>
-                </div>
-            </div>
-        );
+        return <LoginPage onLogin={handleLogin} loginError={loginError} />;
     }
 
     return (
-        <div className="container">
-            <div className="header">
-                <h1>Hallo, {user.username}! 👋</h1>
-                <button className="logout-btn" onClick={handleLogout}>
-                    Abmelden
-                </button>
-            </div>
-
-            {/* Toast Container */}
-            <div className="toast-container">
-                {toasts.map((t) => (
-                    <Toast
-                        key={t.id}
-                        title={t.title}
-                        message={t.message}
-                        type={getToastClass(t.type)}
-                        onClose={() => removeToast(t.id)}
-                    />
-                ))}
-            </div>
-
-            {/* Admin Panel */}
-            {user.isAdmin && (
-                <div className="card admin-card">
-                    <h2>👥 Neuen Teilnehmer einladen</h2>
-                    <form onSubmit={handleCreateUser}>
-                        <div className="admin-input-group">
-                            <input
-                                type="text"
-                                placeholder="Name des Freundes"
-                                value={newUser}
-                                onChange={(e) => setNewUser(e.target.value)}
-                                required
-                            />
-                            <button type="submit">Hinzufügen</button>
-                        </div>
-                    </form>
-                </div>
-            )}
-
-            {/* Daily Check-in */}
-            <div className="card form-card">
-                <h2>Täglicher Check-in</h2>
-                <form onSubmit={handleEntrySubmit}>
-                    <div className="form-group">
-                        <label>Datum:</label>
-                        <input
-                            type="date"
-                            name="date"
-                            value={formData.date}
-                            onChange={handleEntryChange}
-                            max={getTodayISO()}
-                            disabled
-                        />
-                        {!isToday(formData.date) && (
-                            <small style={{ color: 'red' }}>
-                                Nur der heutige Tag ({getTodayISO()}) kann bearbeitet werden.
-                            </small>
-                        )}
-                    </div>
-
-                    <div className="checkbox-group">
-                        <label
-                            className={`checkbox-label ${
-                                !isToday(formData.date) ? 'disabled' : ''
-                            }`}
-                        >
-                            <input
-                                type="checkbox"
-                                name="journal"
-                                checked={formData.journal}
-                                onChange={handleEntryChange}
-                                disabled={!isToday(formData.date)}
-                            />
-                            <span>📝 10min Schritte / Tagebuch</span>
-                        </label>
-
-                        <label
-                            className={`checkbox-label ${
-                                !isToday(formData.date) ? 'disabled' : ''
-                            }`}
-                        >
-                            <input
-                                type="checkbox"
-                                name="meditation"
-                                checked={formData.meditation}
-                                onChange={handleEntryChange}
-                                disabled={!isToday(formData.date)}
-                            />
-                            <span>🧘 10min Meditation</span>
-                        </label>
-
-                        <label
-                            className={`checkbox-label ${
-                                !isToday(formData.date) ? 'disabled' : ''
-                            }`}
-                        >
-                            <input
-                                type="checkbox"
-                                name="movement"
-                                checked={formData.movement}
-                                onChange={handleEntryChange}
-                                disabled={!isToday(formData.date)}
-                            />
-                            <span>🏃 40min Bewegung</span>
-                        </label>
-                    </div>
-
-                    {isToday(formData.date) ? (
-                        <button type="submit">Speichern</button>
-                    ) : (
-                        <button disabled style={{ backgroundColor: '#ccc', cursor: 'not-allowed' }}>
-                            Bearbeiten gesperrt
-                        </button>
-                    )}
-                </form>
-            </div>
-
-            {/* History */}
-            <div className="card history-card">
-                <h2>Gruppen-Historie</h2>
-                <div className="table-responsive">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Datum</th>
-                                <th>Name</th>
-                                <th>📝</th>
-                                <th>🧘</th>
-                                <th>🏃</th>
-                                <th>Fortschritt</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {entries.map((entry, idx) => (
-                                <tr
-                                    key={idx}
-                                    className={entry.username === user.username ? 'my-entry' : ''}
-                                >
-                                    <td>{entry.date}</td>
-                                    <td>{entry.username}</td>
-                                    <td>{entry.journal ? '✅' : '❌'}</td>
-                                    <td>{entry.meditation ? '✅' : '❌'}</td>
-                                    <td>{entry.movement ? '✅' : '❌'}</td>
-                                    <td>
-                                        <div className="progress-bar">
-                                            <div
-                                                className="progress-fill"
-                                                style={{ width: `${getProgress(entry)}%` }}
-                                            ></div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+        <DashboardPage
+            user={user}
+            onLogout={handleLogout}
+            handleAddUser={handleCreateUser}
+            formData={formData}
+            setFormData={setFormData}
+            handleEntrySubmit={handleEntrySubmit}
+            entries={entries}
+            allUsers={allUsers}
+            isToday={isToday}
+        />
     );
 }
 
